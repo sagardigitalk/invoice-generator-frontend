@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { Printer, Edit, ArrowLeft, Palette, Download } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -13,6 +13,16 @@ import { ProfessionalTemplate } from '../components/templates/ProfessionalTempla
 import { ElegantTemplate } from '../components/templates/ElegantTemplate';
 import { GstTemplate } from '../components/templates/GstTemplate';
 
+type TemplateType =
+  | 'classic'
+  | 'modern'
+  | 'minimal'
+  | 'professional'
+  | 'elegant'
+  | 'gst';
+
+const TEMPLATE_STORAGE_KEY = 'invoice_selected_template';
+
 export function InvoiceView() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -22,9 +32,40 @@ export function InvoiceView() {
   
   const invoice = id ? getInvoice(id) : null;
   const printRef = useRef<HTMLDivElement | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<
-    'classic' | 'modern' | 'minimal' | 'professional' | 'elegant' | 'gst'
-  >(config.defaultTemplate);
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateType>('classic');
+
+  useEffect(() => {
+    // On first load (or when settings change), prefer the last template
+    // the user selected, falling back to config.defaultTemplate.
+    if (typeof window === 'undefined') {
+      setSelectedTemplate(config.defaultTemplate);
+      return;
+    }
+
+    const saved = window.localStorage.getItem(
+      TEMPLATE_STORAGE_KEY
+    ) as TemplateType | null;
+
+    if (
+      saved === 'classic' ||
+      saved === 'modern' ||
+      saved === 'minimal' ||
+      saved === 'professional' ||
+      saved === 'elegant' ||
+      saved === 'gst'
+    ) {
+      setSelectedTemplate(saved);
+    } else {
+      setSelectedTemplate(config.defaultTemplate);
+    }
+  }, [config.defaultTemplate]);
+
+  const handleTemplateChange = (value: TemplateType) => {
+    setSelectedTemplate(value);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(TEMPLATE_STORAGE_KEY, value);
+    }
+  };
 
   if (!invoice) {
     return (
@@ -116,7 +157,7 @@ export function InvoiceView() {
               <Palette className="w-4 h-4 text-gray-600" />
               <select
                 value={selectedTemplate}
-                onChange={(e) => setSelectedTemplate(e.target.value as any)}
+                onChange={(e) => handleTemplateChange(e.target.value as TemplateType)}
                 className="text-sm font-medium bg-transparent border-none outline-none cursor-pointer"
               >
                 {templateOptions.map((template) => (
